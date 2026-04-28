@@ -1,32 +1,6 @@
-import importlib
-import sys
-import types
 import unittest
 
-
-def _install_pydoll_stubs() -> None:
-    pydoll_module = types.ModuleType("pydoll")
-    browser_module = types.ModuleType("pydoll.browser")
-    chromium_module = types.ModuleType("pydoll.browser.chromium")
-    options_module = types.ModuleType("pydoll.browser.options")
-
-    class Chrome:
-        pass
-
-    class ChromiumOptions:
-        pass
-
-    chromium_module.Chrome = Chrome
-    options_module.ChromiumOptions = ChromiumOptions
-
-    sys.modules.setdefault("pydoll", pydoll_module)
-    sys.modules.setdefault("pydoll.browser", browser_module)
-    sys.modules.setdefault("pydoll.browser.chromium", chromium_module)
-    sys.modules.setdefault("pydoll.browser.options", options_module)
-
-
-_install_pydoll_stubs()
-script = importlib.import_module("take_initial_screenshot")
+import take_initial_screenshot as script
 
 
 class NormalizeTextTests(unittest.TestCase):
