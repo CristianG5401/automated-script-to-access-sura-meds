@@ -3,6 +3,9 @@ __pycache__/
 *.py[cod]
 
 .tmp/
+.worktrees/
 screenshots/
+
+.playwright-mcp/
 
 .DS_Store
