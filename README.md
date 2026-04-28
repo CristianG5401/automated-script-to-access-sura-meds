@@ -1,39 +1,52 @@
 # EPS Sura Initial Screenshot PoC
 
-Pequeño proyecto de aprendizaje en Python usando `pydoll-python` para abrir la URL pública de medicamentos de EPS Sura en modo headless, guardar una captura inicial y producir una segunda captura con el formulario pre-captcha diligenciado.
+Pequeno proyecto de aprendizaje en Python para abrir la URL publica de medicamentos de EPS Sura con Chrome del sistema en modo stealth, conectar Playwright sobre CDP, guardar una captura inicial y producir una segunda captura con el formulario pre-captcha diligenciado.
 
 ## Objetivo
 
-La idea de este proyecto es aprender una automatización web mínima:
+Este repositorio muestra un flujo pequeno y directo:
 
-- lanzar Chrome desde Python
-- navegar a una SPA
-- esperar a que aparezca una parte básica de la interfaz
-- llenar los tres campos previos al captcha
-- tomar screenshots y guardarlos localmente
+- lanzar Chrome del sistema con SeleniumBase CDP en modo stealth
+- conectar Playwright al navegador activo por CDP
+- abrir la SPA publica de EPS Sura
+- esperar a que aparezca la interfaz principal
+- diligenciar los tres campos previos al captcha
+- guardar dos screenshots locales
 
-## Qué hace el script
+## Runtime actual
 
-El archivo [`take_initial_screenshot.py`](./take_initial_screenshot.py) hace este flujo:
+El script usa esta combinacion:
+
+- `seleniumbase` para lanzar Chrome del sistema en modo stealth con `sb_cdp.Chrome(...)`
+- `playwright` para conectarse a ese navegador con `chromium.connect_over_cdp(...)`
+
+No se usa el navegador descargado por Playwright. Por eso no hace falta correr `playwright install` para este proyecto.
+
+## Que hace el script
+
+El archivo [`take_initial_screenshot.py`](./take_initial_screenshot.py) ejecuta este flujo:
 
 1. crea la carpeta `screenshots/` si no existe
-2. inicia Chrome en modo headless
-3. abre la URL pública de EPS Sura
-4. espera el contenedor principal de la SPA
-5. guarda un screenshot inicial
-6. llena tipo de documento, número de documento y fecha de nacimiento
-7. deja el captcha intacto
-8. guarda un segundo screenshot con el formulario diligenciado
+2. lanza Chrome del sistema en stealth con SeleniumBase CDP
+3. obtiene el endpoint CDP del navegador activo
+4. conecta Playwright sobre ese endpoint CDP
+5. abre la URL publica de medicamentos de EPS Sura
+6. espera el contenedor principal de la SPA
+7. guarda un screenshot inicial
+8. selecciona tipo de documento, llena numero de documento y fecha de nacimiento
+9. verifica los valores diligenciados
+10. guarda un segundo screenshot con el formulario diligenciado
+11. cierra Playwright y detiene la sesion de SeleniumBase
 
 ## Requisitos
 
-- Python 3
-- Google Chrome instalado
+- Python 3.9+
+- Google Chrome instalado en el sistema
 - acceso a internet
 
-## Instalación
+## Instalacion
 
-En macOS y en varios entornos modernos, instalar paquetes con el Python del sistema puede fallar por la política de `externally-managed-environment`. Por eso aquí conviene usar un entorno virtual.
+En macOS y en varios entornos modernos, instalar paquetes con el Python del sistema puede fallar por la politica de `externally-managed-environment`. Aqui conviene usar un entorno virtual.
 
 ```bash
 python3 -m venv .venv
@@ -42,7 +55,9 @@ python -m pip install --upgrade pip
 python -m pip install -r requirements.txt
 ```
 
-## Ejecución
+No necesitas ejecutar `playwright install` porque el script usa Chrome del sistema lanzado por SeleniumBase.
+
+## Ejecucion
 
 Con el entorno virtual activo:
 
@@ -55,24 +70,30 @@ Salida esperada en consola:
 ```text
 Opening URL: https://portaleps.epssura.com/ServiciosUnClick/#/solicitudes/medicamentos?App=tramitesExternos
 Waiting for SPA shell...
-Container detected. Waiting a bit longer for route content to settle.
 Saving screenshot to: screenshots/epssura-medicamentos-inicial.png
 Screenshot saved successfully.
 Selecting document type: CC
 Filling document number: 123456789
 Filling birth date: 01/01/1990
-Verifying populated fields...
 Saving populated-form screenshot to: screenshots/epssura-medicamentos-diligenciado.png
 Populated-form screenshot saved successfully.
 ```
 
-## Valores demo editables
+## Valores editables
 
-Dentro de `take_initial_screenshot.py` puedes cambiar fácilmente:
+Dentro de `take_initial_screenshot.py` puedes cambiar facilmente:
 
+- `URL`
 - `DOCUMENT_TYPE_TEXT`
 - `DOCUMENT_NUMBER`
 - `BIRTH_DATE`
+- `HEADLESS`
+- `ELEMENT_TIMEOUT_MS`
+- `POST_DETECTION_DELAY_MS`
+- `OUTPUT_PATH`
+- `FILLED_OUTPUT_PATH`
+
+`HEADLESS = True` mantiene el comportamiento actual en segundo plano. Si necesitas observar la pagina para depurar, puedes cambiarlo temporalmente a `False`.
 
 ## Screenshots generados
 
@@ -81,17 +102,19 @@ Dentro de `take_initial_screenshot.py` puedes cambiar fácilmente:
 
 ## Alcance actual
 
-Este proyecto llena únicamente los tres campos previos al captcha.
-No intenta resolver, hacer click ni automatizar el captcha.
+Este proyecto llena unicamente los tres campos previos al captcha:
 
-## Resultado
+- tipo de documento
+- numero de documento
+- fecha de nacimiento
 
-Los archivos generados quedan en:
+No intenta resolver, hacer click ni automatizar el captcha. Tampoco envia el formulario despues de diligenciarlo.
 
-```text
-screenshots/epssura-medicamentos-inicial.png
-screenshots/epssura-medicamentos-diligenciado.png
-```
+## Camino futuro para captcha
+
+La estructura actual deja abierto el camino para una iteracion futura con `sb.solve_captcha()`.
+
+El punto natural para agregarlo seria despues de diligenciar y verificar los tres campos previos al captcha, manteniendo la misma sesion activa de SeleniumBase y la misma pagina conectada por Playwright.
 
 ## Estructura del proyecto
 
@@ -102,50 +125,10 @@ screenshots/epssura-medicamentos-diligenciado.png
 ├── screenshots/
 │   ├── epssura-medicamentos-diligenciado.png
 │   └── epssura-medicamentos-inicial.png
-└── take_initial_screenshot.py
+├── take_initial_screenshot.py
+└── tests/
+    └── test_take_initial_screenshot.py
 ```
-
-## Explicación rápida del código
-
-### `asyncio`
-
-Se usa porque `pydoll` trabaja con una API asíncrona. Por eso la función principal es `async def main()` y al final se ejecuta con:
-
-```python
-asyncio.run(main())
-```
-
-### `Path`
-
-`Path` de `pathlib` hace más claro el manejo de rutas:
-
-```python
-OUTPUT_PATH = Path("screenshots/epssura-medicamentos-inicial.png")
-```
-
-### `ChromiumOptions`
-
-Permite configurar el navegador. En este proyecto solo se activa:
-
-```python
-options.headless = True
-```
-
-Eso hace que Chrome corra en segundo plano, sin abrir una ventana visible.
-
-### Espera del contenido
-
-La página es una SPA. Eso significa que abrir la URL no garantiza que el contenido visible ya esté listo. Por eso el script primero intenta encontrar este contenedor:
-
-```python
-app_container = await tab.find(
-    class_name="content-app",
-    timeout=ELEMENT_TIMEOUT_SECONDS,
-    raise_exc=False,
-)
-```
-
-Si no aparece, el script hace una espera fija con `asyncio.sleep(...)` como respaldo.
 
 ## Problemas comunes
 
@@ -157,11 +140,11 @@ Usa `python3` para crear el entorno virtual:
 python3 -m venv .venv
 ```
 
-Después de activar `.venv`, normalmente ya puedes usar `python`.
+Despues de activar `.venv`, normalmente ya puedes usar `python`.
 
 ### `externally-managed-environment`
 
-Eso pasa cuando intentas instalar dependencias en el Python del sistema. La solución es usar `.venv`:
+Eso pasa cuando intentas instalar dependencias en el Python del sistema. La solucion es usar `.venv`:
 
 ```bash
 python3 -m venv .venv
@@ -169,35 +152,28 @@ source .venv/bin/activate
 python -m pip install -r requirements.txt
 ```
 
-### `Failed to start the browser`
+### Fallo al abrir el navegador
 
 Revisa:
 
-- que Google Chrome esté instalado
-- que puedas abrir Chrome normalmente en tu máquina
+- que Google Chrome este instalado
+- que Chrome abra normalmente en tu maquina
 - que no haya restricciones del entorno donde corres el script
 
 ### Screenshot en blanco o incompleto
 
 Prueba primero aumentando:
 
-- `FALLBACK_DELAY_SECONDS` de `5` a `8`
-- `POST_DETECTION_DELAY_SECONDS` de `2` a un valor un poco mayor
+- `ELEMENT_TIMEOUT_MS`
+- `POST_DETECTION_DELAY_MS`
 
-Si sigue fallando, el siguiente paso lógico es esperar un selector más específico de la ruta o correr Chrome en modo visible para observar qué pasa.
+Si sigue fallando, cambia `HEADLESS` a `False` temporalmente para observar el comportamiento real del sitio.
 
-## Dependencia usada
+## Dependencias usadas
 
 [`requirements.txt`](./requirements.txt):
 
 ```text
-pydoll-python
+seleniumbase
+playwright
 ```
-
-## Ideas para seguir aprendiendo
-
-- agregar argumentos CLI como `--url` y `--output`
-- ejecutar el navegador en modo visible temporalmente
-- esperar un selector más específico del formulario
-- capturar errores de red o timeout con mensajes más claros
-- guardar screenshots con timestamp para no sobrescribir resultados
