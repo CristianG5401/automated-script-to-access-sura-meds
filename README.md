@@ -40,7 +40,7 @@ El archivo [`take_initial_screenshot.py`](./take_initial_screenshot.py) ejecuta 
 
 ## Requisitos
 
-- Python 3
+- Python 3.9+
 - Google Chrome instalado en el sistema
 - acceso a internet
 
