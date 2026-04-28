@@ -1,7 +1,7 @@
 import unicodedata
 from pathlib import Path
 
-from playwright.sync_api import Locator, Page, sync_playwright
+from playwright.sync_api import Locator, Page, TimeoutError as PlaywrightTimeoutError, sync_playwright
 from seleniumbase import sb_cdp
 
 URL = "https://portaleps.epssura.com/ServiciosUnClick/#/solicitudes/medicamentos?App=tramitesExternos"
@@ -93,6 +93,13 @@ def read_selected_document_type(document_type_select: Locator) -> str:
     return (selected_text or "").strip()
 
 
+def save_screenshot(page: Page, path: str) -> None:
+    try:
+        page.screenshot(path=path)
+    except PlaywrightTimeoutError:
+        page.screenshot(path=path)
+
+
 def verify_populated_values(
     *,
     selected_text: str,
@@ -133,12 +140,12 @@ def main() -> None:
                 page = context.pages[0] if context.pages else context.new_page()
 
                 print(f"Opening URL: {URL}")
-                page.goto(URL)
+                page.goto(URL, wait_until="domcontentloaded")
                 print("Waiting for SPA shell...")
                 wait_for_page_ready(page)
 
                 print(f"Saving screenshot to: {OUTPUT_PATH}")
-                page.screenshot(path=str(OUTPUT_PATH))
+                save_screenshot(page, str(OUTPUT_PATH))
                 print("Screenshot saved successfully.")
 
                 document_type_select, document_number_input, birth_date_input = get_form_fields(page)
@@ -162,7 +169,7 @@ def main() -> None:
                 )
 
                 print(f"Saving populated-form screenshot to: {FILLED_OUTPUT_PATH}")
-                page.screenshot(path=str(FILLED_OUTPUT_PATH))
+                save_screenshot(page, str(FILLED_OUTPUT_PATH))
                 print("Populated-form screenshot saved successfully.")
             finally:
                 browser.close()

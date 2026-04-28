@@ -113,5 +113,20 @@ class VerifyPopulatedValuesTests(unittest.TestCase):
         )
 
 
+class SaveScreenshotTests(unittest.TestCase):
+    def test_save_screenshot_retries_once_after_playwright_timeout(self) -> None:
+        calls: list[str] = []
+
+        class FakePage:
+            def screenshot(self, *, path: str) -> None:
+                calls.append(path)
+                if len(calls) == 1:
+                    raise script.PlaywrightTimeoutError("fonts still loading")
+
+        script.save_screenshot(FakePage(), "shot.png")
+
+        self.assertEqual(calls, ["shot.png", "shot.png"])
+
+
 if __name__ == "__main__":
     unittest.main()
