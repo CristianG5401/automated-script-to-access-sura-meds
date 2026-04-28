@@ -85,7 +85,10 @@ def fill_document_number(document_number_input: Locator, value: str) -> None:
 
 
 def fill_birth_date(birth_date_input: Locator, value: str) -> None:
-    birth_date_input.fill(value)
+    birth_date_input.click()
+    birth_date_input.fill("")
+    birth_date_input.press_sequentially(value)
+    birth_date_input.blur()
 
 
 def read_selected_document_type(document_type_select: Locator) -> str:
@@ -95,9 +98,9 @@ def read_selected_document_type(document_type_select: Locator) -> str:
 
 def save_screenshot(page: Page, path: str) -> None:
     try:
-        page.screenshot(path=path)
+        page.screenshot(path=path, full_page=True)
     except PlaywrightTimeoutError:
-        page.screenshot(path=path)
+        page.screenshot(path=path, full_page=True)
 
 
 def verify_populated_values(

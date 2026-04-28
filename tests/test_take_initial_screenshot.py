@@ -113,19 +113,55 @@ class VerifyPopulatedValuesTests(unittest.TestCase):
         )
 
 
+class FillBirthDateTests(unittest.TestCase):
+    def test_fill_birth_date_uses_mask_friendly_typing_and_blur(self) -> None:
+        actions: list[tuple[str, str | None]] = []
+
+        class FakeBirthDateInput:
+            def click(self) -> None:
+                actions.append(("click", None))
+
+            def fill(self, value: str) -> None:
+                actions.append(("fill", value))
+
+            def press_sequentially(self, value: str) -> None:
+                actions.append(("press_sequentially", value))
+
+            def blur(self) -> None:
+                actions.append(("blur", None))
+
+        script.fill_birth_date(FakeBirthDateInput(), "01/01/1990")
+
+        self.assertEqual(
+            actions,
+            [
+                ("click", None),
+                ("fill", ""),
+                ("press_sequentially", "01/01/1990"),
+                ("blur", None),
+            ],
+        )
+
+
 class SaveScreenshotTests(unittest.TestCase):
     def test_save_screenshot_retries_once_after_playwright_timeout(self) -> None:
-        calls: list[str] = []
+        calls: list[dict[str, object]] = []
 
         class FakePage:
-            def screenshot(self, *, path: str) -> None:
-                calls.append(path)
+            def screenshot(self, *, path: str, full_page: bool = False) -> None:
+                calls.append({"path": path, "full_page": full_page})
                 if len(calls) == 1:
                     raise script.PlaywrightTimeoutError("fonts still loading")
 
         script.save_screenshot(FakePage(), "shot.png")
 
-        self.assertEqual(calls, ["shot.png", "shot.png"])
+        self.assertEqual(
+            calls,
+            [
+                {"path": "shot.png", "full_page": True},
+                {"path": "shot.png", "full_page": True},
+            ],
+        )
 
 
 if __name__ == "__main__":
